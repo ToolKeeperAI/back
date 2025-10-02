@@ -14,15 +14,15 @@ namespace ToolKeeperAIBackend.Controllers
 	public class ToolsController : BaseDataController<Tool, ToolDto, PatchToolDto>
     {
         protected readonly IEmployeeService _employeeService;
-        protected readonly HttpClient _httpClient;
+        protected readonly IHttpClientFactory _httpClientFactory;
         protected readonly ModelAPISettings _settings;
 
         public ToolsController(IToolService toolService, IEmployeeService employeeService, 
-                               IMapper mapper, HttpClient httpClient, IOptions<AppSettings> options) 
+                               IMapper mapper, IHttpClientFactory httpClientFactory, IOptions<AppSettings> options) 
         : base(toolService, mapper)
         {
             _employeeService = employeeService;
-            _httpClient = httpClient;
+            _httpClientFactory = httpClientFactory;
             _settings = options.Value.ModelAPISettings;
         }
 
@@ -72,8 +72,10 @@ namespace ToolKeeperAIBackend.Controllers
         }
 
         [HttpPost("Test/{toolKitSerialNumber}")]
-        public async Task<IActionResult> TestWorkability(IFormFile archiveFile, [FromRoute] string toolKitSerialNumber)
+        public async Task<IActionResult> TestWorkability(IFormFile archiveFile, [FromRoute] string toolKitSerialNumber = "")
         {
+            Console.WriteLine("TEST!!!!");
+
             if (archiveFile == null || archiveFile.Length == 0)
                 return BadRequest("There is not uploaded archive file");
 
@@ -124,7 +126,9 @@ namespace ToolKeeperAIBackend.Controllers
                 form.Add(new ByteArrayContent(photos[i]), $"files", photoNames[i]);
             }
 
-            return await _httpClient.PostAsync(_settings.PredictBatchImagesUrl, form);
+            using HttpClient httpClient = _httpClientFactory.CreateClient(nameof(HttpClient));
+
+            return await httpClient.PostAsync(_settings.PredictBatchImagesUrl, form);
         }
     }
 }

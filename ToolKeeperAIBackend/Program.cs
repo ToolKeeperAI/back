@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Microsoft.VisualBasic;
 using Service.Abstraction;
 using Service.Db;
 using Service.Implementation;
@@ -26,11 +25,11 @@ namespace ToolKeeperAIBackend
                 optionsBuilder.UseNpgsql(connectionString);
             });
 
-            builder.Services.AddHttpClient<HttpClient>("HttpClient", (serviceProvider, httpClient) =>
+            builder.Services.AddHttpClient<HttpClient>(nameof(HttpClient), (serviceProvider, httpClient) =>
              {
                  var settings = serviceProvider.GetRequiredService<IOptions<AppSettings>>().Value.ModelAPISettings;
 
-                 httpClient.BaseAddress = new Uri(string.Concat(settings.Host, settings.Port));
+                 httpClient.BaseAddress = new Uri(string.Join(':', settings.Host, settings.Port));
              });
 
             builder.Services.AddAutoMapper(typeof(AppMappingProfile));
@@ -43,6 +42,12 @@ namespace ToolKeeperAIBackend
             builder.Services.AddEndpointsApiExplorer();
 
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ToolKeeperDbContext>();
+                db.Database.Migrate();
+            }
 
             app.MapControllers();
 
