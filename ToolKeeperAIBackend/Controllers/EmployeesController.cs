@@ -12,7 +12,5 @@ namespace ToolKeeperAIBackend.Controllers
         {
             
         }
-
-        //TODO: add authentication
     }
 }

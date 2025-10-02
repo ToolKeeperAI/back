@@ -1,12 +1,10 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Options;
+using Microsoft.VisualBasic;
 using Service.Abstraction;
 using Service.Db;
 using Service.Implementation;
 using Service.Settings;
-using System.ComponentModel.Design;
 using ToolKeeperAIBackend.Automapper;
 
 namespace ToolKeeperAIBackend
@@ -28,6 +26,13 @@ namespace ToolKeeperAIBackend
                 optionsBuilder.UseNpgsql(connectionString);
             });
 
+            builder.Services.AddHttpClient<HttpClient>("HttpClient", (serviceProvider, httpClient) =>
+             {
+                 var settings = serviceProvider.GetRequiredService<IOptions<AppSettings>>().Value.ModelAPISettings;
+
+                 httpClient.BaseAddress = new Uri(string.Concat(settings.Host, settings.Port));
+             });
+
             builder.Services.AddAutoMapper(typeof(AppMappingProfile));
 
             builder.Services.AddTransient<IToolKitService, ToolKitService>();
@@ -38,10 +43,6 @@ namespace ToolKeeperAIBackend
             builder.Services.AddEndpointsApiExplorer();
 
             var app = builder.Build();
-
-            app.UseAuthentication();
-
-            app.UseAuthorization();
 
             app.MapControllers();
 

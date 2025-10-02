@@ -24,7 +24,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=tool_keeper_ai_db;Username=postgres;Password=postgres
     ports:
       - "5000:80"
-    command: ["sh", "-c", "dotnet ef database update && dotnet ToolKeeperAIBackend.dll"]
+    command: ["sh", "-c", "dotnet tool install --global dotnet-ef && dotnet ef database update && dotnet ToolKeeperAIBackend.dll"]
 
 volumes:
   pgdata:
