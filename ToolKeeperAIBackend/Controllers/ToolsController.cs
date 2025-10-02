@@ -18,8 +18,9 @@ namespace ToolKeeperAIBackend.Controllers
         protected readonly ModelAPISettings _settings;
 
         public ToolsController(IToolService toolService, IEmployeeService employeeService, 
-                               IMapper mapper, IHttpClientFactory httpClientFactory, IOptions<AppSettings> options) 
-        : base(toolService, mapper)
+                               IMapper mapper, IHttpClientFactory httpClientFactory, ILogger<ToolsController> logger,
+                               IOptions<AppSettings> options) 
+        : base(toolService, mapper, logger)
         {
             _employeeService = employeeService;
             _httpClientFactory = httpClientFactory;
@@ -71,18 +72,51 @@ namespace ToolKeeperAIBackend.Controllers
             return this.FromResult(result);
         }
 
-        [HttpPost("Test/{toolKitSerialNumber}")]
-        public async Task<IActionResult> TestWorkability(IFormFile archiveFile, [FromRoute] string toolKitSerialNumber = "")
+        [HttpPost("Test")]
+        public async Task<IActionResult> TestWorkability(IFormFile file)
         {
-            Console.WriteLine("TEST!!!!");
+            if (file == null || file.Length == 0)
+                return BadRequest("There is not uploaded file");
 
-            if (archiveFile == null || archiveFile.Length == 0)
+            if (file.FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                file.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+            {
+                using var ms = new MemoryStream();
+                using var fileStream = file.OpenReadStream();
+
+                await fileStream.CopyToAsync(ms);
+
+                using HttpClient httpClient = _httpClientFactory.CreateClient(nameof(HttpClient));
+
+                using var form = new MultipartFormDataContent();
+
+                form.Add(new ByteArrayContent(ms.ToArray()), $"file", file.FileName);
+
+                var response = await httpClient.PostAsync(_settings.PredictBatchImagesUrl, form);
+
+                if (!response.IsSuccessStatusCode)
+                    return BadRequest(await response.Content.ReadAsStringAsync());
+
+                var prediction = await response.Content.ReadAsStringAsync();
+
+                return Ok(new Dictionary<string, string> { { file.FileName, prediction } });
+            }
+            else
+            {
+                return BadRequest("File doesnt have png or jpg extension");
+            }
+        }
+
+        [HttpPost("TestZip")]
+        public async Task<IActionResult> TestZipWorkability(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
                 return BadRequest("There is not uploaded archive file");
 
             var photos = new List<byte[]>();
             var photoNames = new List<string>();
 
-            using (var stream = archiveFile.OpenReadStream())
+            using (var stream = file.OpenReadStream())
             using (var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read))
             {
                 foreach (var entry in archive.Entries)
@@ -101,20 +135,20 @@ namespace ToolKeeperAIBackend.Controllers
                 }
             }
 
-            var responseMessage = await SendPhotosToApi(photos, photoNames);
+            var response = await SendPhotosToApi(photos, photoNames);
 
-            if (!responseMessage.IsSuccessStatusCode)
-                return BadRequest(await responseMessage.Content.ReadAsStringAsync());
+            if (!response.IsSuccessStatusCode)
+                return BadRequest(await response.Content.ReadAsStringAsync());
 
-            var responseJson = await responseMessage.Content.ReadAsStringAsync();
+            var responseJson = await response.Content.ReadAsStringAsync();
 
-            List<string> predictions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(responseJson)!;
+            List<string> predictions = JsonSerializer.Deserialize<List<string>>(responseJson)!;
 
-            var response = photoNames
+            var result = photoNames
                 .Select((name, i) => new { FileName = name, Result = predictions[i] })
                 .ToDictionary(x => x.FileName, x => x.Result);
 
-            return Ok(response);
+            return Ok(result);
         }
 
         private async Task<HttpResponseMessage> SendPhotosToApi(List<byte[]> photos, List<string> photoNames)

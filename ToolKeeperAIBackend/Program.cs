@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Serilog;
+using Serilog.Events;
 using Service.Abstraction;
 using Service.Db;
 using Service.Implementation;
 using Service.Settings;
 using ToolKeeperAIBackend.Automapper;
+using ToolKeeperAIBackend.Middlewares;
 
 namespace ToolKeeperAIBackend
 {
@@ -41,6 +44,13 @@ namespace ToolKeeperAIBackend
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
 
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.File("Logs/myapp-{Date}.log", rollingInterval: RollingInterval.Day, restrictedToMinimumLevel: LogEventLevel.Warning)
+                .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
+                .CreateLogger();
+
+            builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddSerilog(dispose: true));
+
             var app = builder.Build();
 
             using (var scope = app.Services.CreateScope())
@@ -49,6 +59,7 @@ namespace ToolKeeperAIBackend
                 db.Database.Migrate();
             }
 
+            app.UseMiddleware<ErrorHandlingMiddleware>();
             app.MapControllers();
 
             app.Run();

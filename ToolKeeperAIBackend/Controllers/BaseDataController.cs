@@ -15,12 +15,14 @@ namespace ToolKeeperAIBackend.Controllers
         where TPatchDto : class
     {
         protected readonly IBaseEntityService<T, TDto> _service;
+        protected readonly ILogger<BaseDataController<T, TDto, TPatchDto>> _logger;
         protected readonly IMapper _mapper;
 
-        protected BaseDataController(IBaseEntityService<T, TDto> service, IMapper mapper)
+        protected BaseDataController(IBaseEntityService<T, TDto> service, IMapper mapper, ILogger<BaseDataController<T, TDto, TPatchDto>> logger)
         {
             _service = service;
             _mapper = mapper;
+            _logger = logger;
         }
 
         [HttpGet]

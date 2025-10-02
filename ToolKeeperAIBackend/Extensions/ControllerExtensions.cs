@@ -5,12 +5,16 @@ namespace ToolKeeperAIBackend.Extensions
 {
     public static class ControllerExtensions
     {
-        public static ActionResult FromResult<T>(this ControllerBase controller, Result<T> result)
+        public static ActionResult FromResult<T>(this ControllerBase controller, Result<T> result, ILogger logger)
         {
             if (result.IsSuccess)
                 return controller.Ok(result.Data);
             else
+            {
+                logger.LogWarning(message: "Non successful response", result.Error);
+
                 return GetErrorResult(controller, result.Error!);
+            }
         }
 
         public static ActionResult FromResult(this ControllerBase controller, Result result)

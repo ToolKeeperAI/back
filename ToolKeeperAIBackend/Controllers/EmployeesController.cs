@@ -8,7 +8,7 @@ namespace ToolKeeperAIBackend.Controllers
 {
     public class EmployeesController : BaseDataController<Employee, EmployeeDto, PatchEmployeeDto>
     {
-        public EmployeesController(IEmployeeService service, IMapper mapper) : base(service, mapper)
+        public EmployeesController(IEmployeeService service, IMapper mapper, ILogger<EmployeesController> logger) : base(service, mapper, logger)
         {
             
         }
