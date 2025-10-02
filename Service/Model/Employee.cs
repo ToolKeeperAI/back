@@ -22,6 +22,6 @@ namespace Service.Model
 
 
         [SwaggerIgnore]
-        public Collection<ToolUsage> ToolUsage { get; set; }
+        public Collection<ToolUsage> ToolUsages { get; set; }
     }
 }

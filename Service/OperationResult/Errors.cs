@@ -8,7 +8,9 @@
 		public static Error NotFoundByPredicate() => new Error("The entity was not found by condition", ErrorType.NotFound);
 		public static Error NotFoundByPredicate(Type type) => new Error($"The {type.Name} entity was not found by condition", ErrorType.NotFound);
 
-		public static Error NotFoundCollectionOfEntities(Type type) => new Error($"The collection of {type.Name} entities was not found", ErrorType.NotFound);
+        public static Error NotFoundBySerialNumber(string serialNumber, Type type) => new Error($"There is not one {type.Name} entity with serial number - {serialNumber}", ErrorType.NotFound);
+
+        public static Error NotFoundCollectionOfEntities(Type type) => new Error($"The collection of {type.Name} entities was not found", ErrorType.NotFound);
 
 		public static Error NotFoundCollectionOfEntities(IEnumerable<long> missedIds, Type type) => new Error($"The collection of {type.Name} entities was not found. The missing ids: {string.Join(',', missedIds)}", ErrorType.NotFound);
 	}

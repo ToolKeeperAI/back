@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Service.Model;
 
-namespace Service.Dto
+namespace Service.Dto.Create
 {
     public class TestResult
     {

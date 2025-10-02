@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Service.Abstraction;
 using Service.Model;
 using System.Linq.Expressions;
@@ -7,16 +8,19 @@ using ToolKeeperAIBackend.Extensions;
 namespace ToolKeeperAIBackend.Controllers
 {
     [ApiController]
-    [Route("odata/api/v1/[controller]")]
-    public abstract class BaseDataController<T, TDto> : ControllerBase
+    [Route("api/v1/[controller]")]
+    public abstract class BaseDataController<T, TDto, TPatchDto> : ControllerBase
         where T : BaseModel
         where TDto : class
+        where TPatchDto : class
     {
         protected readonly IBaseEntityService<T, TDto> _service;
+        protected readonly IMapper _mapper;
 
-        protected BaseDataController(IBaseEntityService<T, TDto> service)
+        protected BaseDataController(IBaseEntityService<T, TDto> service, IMapper mapper)
         {
             _service = service;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -51,9 +55,11 @@ namespace ToolKeeperAIBackend.Controllers
             return this.FromResult(query);
         }
 
-        [HttpPut("{key:long}")]
-        public virtual async Task<IActionResult> Change([FromRoute] long key, [FromBody] TDto dto)
+        [HttpPatch("{key:long}")]
+        public virtual async Task<IActionResult> Change([FromRoute] long key, [FromBody] TPatchDto updateDto)
         {
+            var dto = _mapper.Map<TDto>(updateDto);
+
             var result = await _service.UpdateAsync(key, dto);
 
             if (!result.IsSuccess)

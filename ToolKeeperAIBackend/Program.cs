@@ -1,6 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Service.Abstraction;
+using Service.Db;
+using Service.Implementation;
+using Service.Settings;
+using System.ComponentModel.Design;
+using ToolKeeperAIBackend.Automapper;
 
 namespace ToolKeeperAIBackend
 {
@@ -10,60 +17,33 @@ namespace ToolKeeperAIBackend
 		{
 			var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddControllers();
+            builder.Services.Configure<AppSettings>(builder.Configuration.GetRequiredSection(nameof(AppSettings)));
 
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(c =>
+            builder.Services.AddDbContextFactory<ToolKeeperDbContext>((IServiceProvider serviceProvider, DbContextOptionsBuilder optionsBuilder) =>
             {
-                c.AddSecurityDefinition("basic", new OpenApiSecurityScheme
-                {
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "basic",
-                    In = ParameterLocation.Header,
-                    Description = "Basic Authorization header using the Bearer scheme."
-                });
+                var configuration = serviceProvider.GetRequiredService<IConfiguration>();
 
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    {
-                          new OpenApiSecurityScheme
-                            {
-                                Reference = new OpenApiReference
-                                {
-                                    Type = ReferenceType.SecurityScheme,
-                                    Id = "basic"
-                                }
-                            },
-                            new string[] {}
-                    }
-                });
+                var connectionString = configuration.GetConnectionString("DefaultConnection");
 
-                c.UseAllOfToExtendReferenceSchemas();
+                optionsBuilder.UseNpgsql(connectionString);
             });
 
+            builder.Services.AddAutoMapper(typeof(AppMappingProfile));
+
+            builder.Services.AddTransient<IToolKitService, ToolKitService>();
+            builder.Services.AddTransient<IToolService, ToolService>();
+            builder.Services.AddTransient<IEmployeeService, EmployeeService>();
+
+            builder.Services.AddControllers();
+            builder.Services.AddEndpointsApiExplorer();
+
             var app = builder.Build();
-
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI(options => // UseSwaggerUI is called only in Development.
-                {
-                    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-                    options.RoutePrefix = string.Empty;
-                });
-            }
-
-            app.UseRouting();
 
             app.UseAuthentication();
 
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-            });
+            app.MapControllers();
 
             app.Run();
 		}

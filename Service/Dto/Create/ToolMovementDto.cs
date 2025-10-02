@@ -1,4 +1,4 @@
-﻿namespace Service.Dto
+﻿namespace Service.Dto.Create
 {
     public class ToolMovementDto
     {

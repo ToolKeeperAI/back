@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Service.Abstraction;
 using Service.Db;
-using Service.Dto;
+using Service.Dto.Create;
 using Service.Model;
 
 namespace Service.Implementation

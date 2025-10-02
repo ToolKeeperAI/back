@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Service.Dto
+namespace Service.Dto.Create
 {
     public class ToolDto
     {

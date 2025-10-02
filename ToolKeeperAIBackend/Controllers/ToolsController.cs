@@ -1,119 +1,79 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Abstraction;
-using Service.Dto;
+using Service.Dto.Create;
+using Service.Dto.Patch;
 using Service.Model;
 using Service.OperationResult;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using ToolKeeperAIBackend.Extensions;
 
 namespace ToolKeeperAIBackend.Controllers
 {
-	public class ToolsController : BaseDataController<Tool, ToolDto>
+	public class ToolsController : BaseDataController<Tool, ToolDto, PatchToolDto>
     {
         protected readonly IEmployeeService _employeeService;
 
-        public ToolsController(IToolService toolService, IEmployeeService employeeService) : base(toolService)
+        public ToolsController(IToolService toolService, IEmployeeService employeeService, IMapper mapper) : base(toolService, mapper)
         {
-            _employeeService = employeeService
+            _employeeService = employeeService;
         }
 
         [HttpGet("GetByKitId/{kitId:long}")]
         [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<Tool>))]
-        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(Error))]
         public async Task<IActionResult> GetToolsByKitId([FromRoute] long kitId)
 		{
-			return Ok();
+            var result = await ((IToolService)_service).GetByToolKitIdAsync(kitId);
+
+            return this.FromResult(result);
 		}
 
-        //[HttpGet("{toolId:long}")]
-        //[AllowAnonymous]
-        //[ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Tool))]
-        //[ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(Error))]
-        //[ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(Error))]
-        //public async Task<IActionResult> GetById([FromRoute] long toolId)
-        //{
-        //    return Ok();
-        //}
+        //TODO: add authentication
 
-        //[HttpPost]
+        [HttpPost("CheckToolsPresence/{toolKitSerialNumber}")]
         //[Authorize]
-        //[Produces<Tool>()]
-        //[ProducesResponseType(StatusCodes.Status201Created, Type = typeof(Tool))]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(Error))]
-        //[ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(Error))]
-        //[ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(Error))]
-        //public async Task<IActionResult> Create([FromBody] ToolDto toolDto)
-        //{
-        //    return Created();
-        //}
-
-        //[HttpPut("{toolId:long}")]
-        //[Authorize]
-        //[Produces<Tool>()]
-        //[ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Tool))]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(Error))]
-        //[ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(Error))]
-        //[ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(Error))]
-        //public async Task<IActionResult> Update([FromBody] ToolDto toolDto, [FromRoute] long toolId)
-        //{
-        //    return Ok();
-        //}
-
-        //[HttpDelete("{toolId:long}")]
-        //[Authorize]
-        //[Produces<Tool>()]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(Error))]
-        //[ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(Error))]
-        //[ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(Error))]
-        //public async Task<IActionResult> Delete([FromRoute] long toolId)
-        //{
-        //    return Ok();
-        //}
-
-        [HttpPost("CheckToolsPresence")]
-        [Authorize]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(Error))]
-        public async Task<IActionResult> CheckToolsPresence([FromBody] ToolCheckingDto[] toolChekings)
+        public async Task<IActionResult> CheckToolsPresence([FromBody] ToolCheckingDto[] toolCheckings, [FromRoute] string toolKitSerialNumber)
         {
-            return Ok();
+            var result = await ((IToolService)_service).CheckToolsPresenceAsync(toolCheckings, toolKitSerialNumber);
+
+            if (result.IsSuccess)
+                Console.WriteLine(JsonSerializer.Serialize(result.Data));
+
+            return this.FromResult(result);
         }
 
         [HttpPost("TakeTools/{employeeId:long}")]
-        [Authorize]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(Error))]
+        //[Authorize]
         public async Task<IActionResult> TakeTools([FromBody] ToolMovementDto[] toolMovements, [FromRoute] long employeeId)
         {
-            return Ok();
+            var searchEmployee = await _employeeService.GetByIdAsync(employeeId);
+
+            if (!searchEmployee.IsSuccess)
+                return NotFound($"Employee with id - {employeeId} doesnt exist");
+
+            var result = await ((IToolService)_service).TakeToolsAsync(toolMovements, employeeId);
+
+            return this.FromResult(result);
         }
 
         [HttpPost("ReturnTools/{employeeId:long}")]
-        [Authorize]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(Error))]
+        //[Authorize]
         public async Task<IActionResult> ReturnTools([FromBody] ToolMovementDto[] toolMovements, [FromRoute] long employeeId)
         {
-            return Ok();
+            var searchEmployee = await _employeeService.GetByIdAsync(employeeId);
+
+            if (!searchEmployee.IsSuccess)
+                return NotFound($"Employee with id - {employeeId} doesnt exist");
+
+            var result = await ((IToolService)_service).ReturnToolsAsync(toolMovements, employeeId);
+
+            return this.FromResult(result);
         }
 
         [HttpPost("Test/{toolKitSerialNumber}")]
         [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TestResult))]
-        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(Error))]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(Error))]
         public async Task<IActionResult> TestWorkability(IFormFile file, [FromRoute] string toolKitSerialNumber)
         {
             return Ok();
